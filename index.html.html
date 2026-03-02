@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sport Tracker · Watch</title>
+<style>
+/* =============================================
+   APPLE WATCH SE 3 — 40mm = 162 × 197 CSS px
+   Base: 1px = ~2.5 physical pixels (OLED)
+   ============================================= */
+
+:root {
+  --w: 162px;
+  --h: 197px;
+
+  /* Dark-first palette — OLED true black */
+  --bg:        #000000;
+  --surface:   #111111;
+  --surface2:  #1C1C1E;
+  --border:    #2C2C2E;
+  --text:      #FFFFFF;
+  --text-dim:  #8E8E93;
+  --text-hint: #48484A;
+
+  /* Accent colors */
+  --blue:      #0A84FF;
+  --blue-dim:  #0A3D7A;
+  --green:     #30D158;
+  --green-dim: #1A5C2A;
+  --orange:    #FF9F0A;
+  --red:       #FF453A;
+  --yellow:    #FFD60A;
+
+  /* Pullups = blue | Muscleups = orange */
+  --pu:        var(--blue);
+  --mu:        var(--orange);
+
+  /* Typography — SF-like stack */
+  --font: -apple-system, "SF Pro Rounded", "SF Pro Display", system-ui, sans-serif;
+
+  /* Touch target minimum */
+  --tap: 44px;
+
+  /* Transitions */
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+  background: var(--bg);
+  font-family: var(--font);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  /* Simulate Watch bezel in browser */
+  position: relative;
+}
+body {
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+  background: var(--bg);
+  position: relative;
+}
+
+/* ── SCREEN SYSTEM ── */
+/* Each .screen fills the watch face; only .active is visible */
+.screen {
+  position: absolute;
+  inset: 0;
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(20px);
+  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+}
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+.screen.exit-left {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* Scrollable area inside screen */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* ── TYPOGRAPHY ── */
+.t-title  { font-size: 13px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; }
+.t-big    { font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; font-variant-numeric: tabular-nums; }
+.t-mega   { font-size: 38px; font-weight: 900; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+.t-label  { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: var(--text-dim); line-height: 1; }
+.t-body   { font-size: 11px; font-weight: 500; line-height: 1.3; }
+.t-small  { font-size: 9px; font-weight: 500; color: var(--text-dim); }
+
+/* ── COMPONENTS ── */
+
+/* Header bar (no bottom nav on watch = waste of space) */
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 4px;
+  min-height: 28px;
+  flex-shrink: 0;
+}
+.hdr-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.hdr-back {
+  width: 26px; height: 26px;
+  background: var(--surface2);
+  border-radius: 50%;
+  border: none;
+  color: var(--blue);
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+.hdr-back:active { opacity: 0.6; }
+
+/* Card */
+.card {
+  background: var(--surface2);
+  border-radius: 14px;
+  margin: 0 6px 6px;
+  padding: 10px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
+
+/* Big tap button */
+.tap-btn {
+  width: 100%;
+  min-height: var(--tap);
+  border: none;
+  border-radius: 14px;
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s var(--ease), opacity 0.08s;
+  position: relative;
+  overflow: hidden;
+}
+.tap-btn:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+.tap-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.1);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.tap-btn:active::after { opacity: 1; }
+
+.btn-blue  { background: var(--blue);   color: #fff; }
+.btn-orange{ background: var(--orange); color: #000; }
+.btn-green { background: var(--green);  color: #000; }
+.btn-dark  { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-red   { background: var(--red);    color: #fff; }
+
+/* Increment row */
+.inc-row {
+  display: flex;
+  gap: 4px;
+  margin: 0 6px 4px;
+}
+.inc-btn {
+  flex: 1;
+  height: var(--tap);
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s, opacity 0.08s;
+  display: flex; align-items: center; justify-content: center;
+}
+.inc-btn:active { transform: scale(0.93); opacity: 0.8; }
+
+/* RPE slider row */
+.rpe-track {
+  position: relative;
+  height: 36px;
+  background: var(--surface);
+  border-radius: 18px;
+  margin: 0 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.rpe-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  border-radius: 18px;
+  transition: width 0.15s var(--ease);
+}
+.rpe-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.rpe-dots {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 8px;
+  margin: 3px 6px 0;
+}
+.rpe-dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: none;
+  font-size: 8px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2);
+  color: var(--text-dim);
+}
+.rpe-dot.active {
+  transform: scale(1.3);
+  color: #fff;
+}
+.rpe-dot:active { transform: scale(1.1); }
+
+/* Progress arc (SVG ring) */
+.progress-ring-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.ring-label {
+  position: absolute;
+  text-align: center;
+}
+
+/* Stats row */
+.stat-row {
+  display: flex;
+  gap: 4px;
+  margin: 0 6px 4px;
+}
+.stat-pill {
+  flex: 1;
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 7px 6px;
+  text-align: center;
+}
+.stat-pill .val {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-pill .lbl {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Separator */
+.sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+  opacity: 0.5;
+}
+
+/* Streak dots */
+.streak-row {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  padding: 4px 0;
+}
+.streak-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.streak-dot.done { background: var(--green); }
+.streak-dot.today { background: var(--blue); box-shadow: 0 0 4px var(--blue); }
+
+/* Toast */
+.toast {
+  position: absolute;
+  bottom: 8px;
+  left: 8px; right: 8px;
+  background: rgba(28,28,30,0.95);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.2s var(--ease);
+  pointer-events: none;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Digital Crown simulator scrollbar area (invisible but functional) */
+.crown-scroll {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 4px;
+  opacity: 0;
+  cursor: ns-resize;
+}
+
+/* Divider label */
+.section-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-hint);
+  padding: 6px 10px 2px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCREEN 1: HOME / SÉANCE DU JOUR
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#s-home .time-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 0 2px;
+}
+#s-home .time-h {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+#s-home .time-m {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+#s-home .date-label {
+  text-align: center;
+  font-size: 9px;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 6px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCREEN 2: EXERCICE EN COURS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#s-exercise .ex-name {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+#s-exercise .ex-count {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: -3px;
+  text-align: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 0;
+}
+#s-exercise .ex-unit {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-top: -2px;
+  margin-bottom: 6px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCREEN 3: SAISIE SÉRIE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#s-set .set-header {
+  text-align: center;
+  padding: 6px 0 4px;
+}
+#s-set .set-series-num {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+#s-set .set-ex-name {
+  font-size: 12px;
+  font-weight: 800;
+}
+#s-set .qty-display {
+  text-align: center;
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1;
+  padding: 4px 0;
+}
+#s-set .qty-unit {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-top: -2px;
+  margin-bottom: 4px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCREEN 4: RPE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#s-rpe .rpe-title {
+  text-align: center;
+  padding: 8px 0 6px;
+}
+#s-rpe .rpe-face {
+  font-size: 28px;
+  line-height: 1;
+}
+#s-rpe .rpe-word {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCREEN 5: RÉSUMÉ
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#s-summary .sum-trophy {
+  text-align: center;
+  padding: 10px 0 4px;
+  font-size: 32px;
+}
+#s-summary .sum-title {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--green);
+  margin-bottom: 6px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BROWSER DEMO WRAPPER
+   Shows the watch bezel when opened in browser
+   Remove for actual WatchKit/WKWebView use
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+</style>
+</head>
+
+<!-- 
+  ═══════════════════════════════════════════
+   ARCHITECTURE: 5 micro-écrans empilés
+   Navigation par show/goTo() JS — pas de
+   tab-bar (trop petite pour montre).
+   
+   S1: HOME         → Vue d'ensemble du jour
+   S2: EXERCISE     → Exercice actif (compteur)
+   S3: SET ENTRY    → Saisie d'une série
+   S4: RPE          → Ressenti effort (1-10)
+   S5: SUMMARY      → Bilan de séance
+  ═══════════════════════════════════════════
+-->
+
+<body>
+
+<!-- ═══ SCREEN 1 — HOME ═══ -->
+<section class="screen active" id="s-home">
+  <div class="hdr">
+    <span class="hdr-icon">💪</span>
+    <span class="t-label" id="home-streak-label">SÉANCE DU JOUR</span>
+    <button class="hdr-back" onclick="goTo('s-summary')" aria-label="Résumé">📊</button>
+  </div>
+
+  <div class="scroll-area">
+    <!-- Live clock -->
+    <div class="time-bar">
+      <span class="time-h" id="clock-h">--</span>
+      <span class="time-m" id="clock-m">:--</span>
+    </div>
+    <div class="date-label" id="home-date">CHARGEMENT...</div>
+
+    <!-- Quick totals -->
+    <div class="stat-row">
+      <div class="stat-pill">
+        <div class="val" id="home-pu-total" style="color:var(--blue)">0</div>
+        <div class="lbl">TRACT.</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="home-mu-total" style="color:var(--orange)">0</div>
+        <div class="lbl">M-UPS</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="home-entries" style="color:var(--green)">0</div>
+        <div class="lbl">SÉRIES</div>
+      </div>
+    </div>
+
+    <!-- Week streak dots (7 days) -->
+    <div class="sep"></div>
+    <div class="streak-row" id="streak-row">
+      <!-- Generated by JS -->
+    </div>
+    <div class="t-small" style="text-align:center;margin-bottom:6px;" id="streak-label">Chargement...</div>
+    <div class="sep"></div>
+
+    <!-- CTA Buttons -->
+    <div style="padding: 0 6px 4px; display:flex; flex-direction:column; gap:5px;">
+      <button class="tap-btn btn-blue" style="font-size:13px;" onclick="startExercise('pullups')">
+        🏋️ Tractions
+      </button>
+      <button class="tap-btn btn-orange" style="font-size:13px;" onclick="startExercise('muscleups')">
+        💥 Muscle-ups
+      </button>
+    </div>
+
+    <!-- Goal progress mini -->
+    <div class="section-label">OBJECTIFS</div>
+    <div class="card" style="padding:8px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <span class="t-label" style="color:var(--blue)">TRACTIONS</span>
+        <span class="t-body" id="goal-pu-text" style="font-variant-numeric:tabular-nums;font-weight:800;font-size:10px;">0 / 50</span>
+      </div>
+      <div style="height:5px;background:var(--surface);border-radius:3px;overflow:hidden;">
+        <div id="goal-pu-bar" style="height:100%;background:var(--blue);border-radius:3px;width:0%;transition:width 0.4s var(--ease);"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;margin-bottom:5px;">
+        <span class="t-label" style="color:var(--orange)">MUSCLE-UPS</span>
+        <span class="t-body" id="goal-mu-text" style="font-variant-numeric:tabular-nums;font-weight:800;font-size:10px;">0 / 20</span>
+      </div>
+      <div style="height:5px;background:var(--surface);border-radius:3px;overflow:hidden;">
+        <div id="goal-mu-bar" style="height:100%;background:var(--orange);border-radius:3px;width:0%;transition:width 0.4s var(--ease);"></div>
+      </div>
+    </div>
+
+    <!-- Reset -->
+    <div style="padding:0 6px 10px;">
+      <button class="tap-btn btn-dark" style="font-size:10px;height:32px;color:var(--red);opacity:0.7;" onclick="confirmReset()">
+        ↺ Reset journée
+      </button>
+    </div>
+
+  </div><!-- /scroll-area -->
+</section>
+
+<!-- ═══ SCREEN 2 — EXERCISE ═══ -->
+<section class="screen" id="s-exercise">
+  <div class="hdr">
+    <button class="hdr-back" onclick="goTo('s-home')" aria-label="Retour">←</button>
+    <span class="t-label" id="ex-hdr-label">TRACTIONS</span>
+    <button class="hdr-back" onclick="goTo('s-summary')" style="font-size:10px;width:28px;background:var(--surface2);">📋</button>
+  </div>
+
+  <div class="scroll-area">
+    <!-- Main counter -->
+    <div id="ex-count-display" class="ex-count" style="padding:4px 0 0;">0</div>
+    <div id="ex-unit-label" class="ex-unit">aujourd'hui</div>
+
+    <!-- +1 / +5 / +10 -->
+    <div class="inc-row">
+      <button class="inc-btn" id="inc-1"  onclick="quickAdd(1)"  style="background:var(--surface2);">+1</button>
+      <button class="inc-btn" id="inc-5"  onclick="quickAdd(5)"  style="font-size:13px;">+5</button>
+      <button class="inc-btn" id="inc-10" onclick="quickAdd(10)" style="font-size:12px;">+10</button>
+    </div>
+
+    <!-- Log une série avec RPE -->
+    <div style="padding:0 6px;margin-top:2px;">
+      <button class="tap-btn btn-green" style="font-size:12px;" onclick="openSetEntry()">
+        ✓ Enregistrer série
+      </button>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- Session summary -->
+    <div class="section-label">CE WORKOUT</div>
+    <div class="stat-row">
+      <div class="stat-pill">
+        <div class="val" id="ex-session-reps" style="font-size:14px;">0</div>
+        <div class="lbl">REPS</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="ex-session-sets" style="font-size:14px;">0</div>
+        <div class="lbl">SÉRIES</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="ex-session-rpe" style="font-size:14px;">—</div>
+        <div class="lbl">RPE</div>
+      </div>
+    </div>
+
+    <!-- Last 3 sets -->
+    <div class="section-label">DERNIÈRES SÉRIES</div>
+    <div id="ex-set-list" style="padding:0 6px 10px;display:flex;flex-direction:column;gap:3px;">
+      <div class="t-small" style="text-align:center;padding:4px 0;">Aucune série</div>
+    </div>
+
+  </div><!-- /scroll-area -->
+</section>
+
+<!-- ═══ SCREEN 3 — SET ENTRY ═══ -->
+<section class="screen" id="s-set">
+  <div class="hdr">
+    <button class="hdr-back" onclick="goTo('s-exercise')" aria-label="Retour">←</button>
+    <div class="set-header" style="flex:1;padding:0;">
+      <div class="set-series-num" id="set-series-label">SÉRIE 1</div>
+      <div class="set-ex-name" id="set-ex-name">TRACTIONS</div>
+    </div>
+    <div style="width:26px;"></div>
+  </div>
+
+  <div class="scroll-area">
+    <!-- Quantity -->
+    <div class="qty-display" id="set-qty">10</div>
+    <div class="qty-unit">répétitions</div>
+
+    <!-- Qty adjust -->
+    <div class="inc-row">
+      <button class="inc-btn" onclick="adjustSetQty(-5)"  style="background:var(--surface2);color:var(--red);font-size:12px;">−5</button>
+      <button class="inc-btn" onclick="adjustSetQty(-1)"  style="background:var(--surface2);color:var(--red);">−1</button>
+      <button class="inc-btn" onclick="adjustSetQty(1)"   style="background:var(--surface2);color:var(--green);">+1</button>
+      <button class="inc-btn" onclick="adjustSetQty(5)"   style="background:var(--surface2);color:var(--green);font-size:12px;">+5</button>
+    </div>
+
+    <div class="sep" style="margin-top:6px;"></div>
+
+    <!-- RPE inline preview -->
+    <div class="section-label">RESSENTI (RPE)</div>
+    <div style="padding:0 6px;margin-bottom:4px;">
+      <div id="set-rpe-track" class="rpe-track" onclick="handleRpeTrackClick(event)">
+        <div id="set-rpe-fill" class="rpe-fill" style="background:var(--green);width:50%;"></div>
+        <div class="rpe-label" id="set-rpe-label">5</div>
+      </div>
+    </div>
+    <!-- RPE tap shortcuts -->
+    <div class="rpe-dots" id="set-rpe-dots">
+      <!-- Generated by JS -->
+    </div>
+
+    <div style="height:8px;"></div>
+
+    <!-- Confirm -->
+    <div style="padding:0 6px 10px;">
+      <button class="tap-btn btn-green" onclick="confirmSet()">
+        ✓ Valider
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SCREEN 4 — RPE DETAIL ═══ -->
+<section class="screen" id="s-rpe">
+  <div class="hdr">
+    <button class="hdr-back" onclick="goTo('s-exercise')" aria-label="Retour">←</button>
+    <span class="t-label">RESSENTI</span>
+    <div style="width:26px;"></div>
+  </div>
+
+  <div class="scroll-area">
+    <div class="rpe-title">
+      <div class="rpe-face" id="rpe-face">😐</div>
+      <div class="rpe-word" id="rpe-word">MODÉRÉ</div>
+    </div>
+
+    <!-- Big RPE slider -->
+    <div style="padding:0 6px;margin-bottom:6px;">
+      <div id="rpe-main-track" class="rpe-track" style="height:48px;" onclick="handleMainRpeClick(event)">
+        <div id="rpe-main-fill" class="rpe-fill" style="width:50%;"></div>
+        <div class="rpe-label" id="rpe-main-label" style="font-size:20px;">5</div>
+      </div>
+    </div>
+
+    <!-- Scale explanation -->
+    <div class="card" style="padding:7px 10px;">
+      <div id="rpe-scale-desc" class="t-body" style="color:var(--text-dim);text-align:center;line-height:1.4;">
+        Effort modéré, conversation possible
+      </div>
+    </div>
+
+    <!-- Number grid 1-10 -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px 6px 10px;">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SCREEN 5 — SUMMARY ═══ -->
+<section class="screen" id="s-summary">
+  <div class="hdr">
+    <button class="hdr-back" onclick="goTo('s-home')" aria-label="Retour">←</button>
+    <span class="t-label">BILAN</span>
+    <div style="width:26px;"></div>
+  </div>
+
+  <div class="scroll-area">
+    <div class="sum-trophy" id="sum-trophy">🏆</div>
+    <div class="sum-title" id="sum-title">SÉANCE TERMINÉE</div>
+
+    <!-- Today totals -->
+    <div class="stat-row">
+      <div class="stat-pill">
+        <div class="val" id="sum-pu" style="color:var(--blue);">0</div>
+        <div class="lbl">TRACT.</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="sum-mu" style="color:var(--orange);">0</div>
+        <div class="lbl">M-UPS</div>
+      </div>
+    </div>
+
+    <div class="stat-row" style="margin-top:0;">
+      <div class="stat-pill">
+        <div class="val" id="sum-sets" style="color:var(--green);">0</div>
+        <div class="lbl">SÉRIES</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="sum-rpe" style="font-size:13px;">—</div>
+        <div class="lbl">RPE MOY.</div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    <div class="section-label">CETTE SEMAINE</div>
+
+    <div class="stat-row">
+      <div class="stat-pill">
+        <div class="val" id="sum-week-pu" style="color:var(--blue);font-size:13px;">0</div>
+        <div class="lbl">TRACT.</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="sum-week-mu" style="color:var(--orange);font-size:13px;">0</div>
+        <div class="lbl">M-UPS</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="sum-week-days" style="color:var(--green);font-size:13px;">0</div>
+        <div class="lbl">JOURS</div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    <div class="section-label">MOYENNES ACTIVES</div>
+
+    <div class="card" style="padding:8px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <span class="t-small" style="color:var(--blue);">▸ Moy/jour tractions</span>
+        <span class="t-body" id="sum-avg-pu" style="font-weight:800;font-size:11px;font-variant-numeric:tabular-nums;">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <span class="t-small" style="color:var(--orange);">▸ Moy/jour muscle-ups</span>
+        <span class="t-body" id="sum-avg-mu" style="font-weight:800;font-size:11px;font-variant-numeric:tabular-nums;">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="t-small" style="color:var(--green);">▸ Jours actifs total</span>
+        <span class="t-body" id="sum-active-days" style="font-weight:800;font-size:11px;font-variant-numeric:tabular-nums;">—</span>
+      </div>
+    </div>
+
+    <!-- 7-day mini history -->
+    <div class="section-label">7 DERNIERS JOURS</div>
+    <div id="sum-history-bars" style="padding:0 6px 10px;display:flex;align-items:flex-end;gap:3px;height:50px;">
+      <!-- Generated by JS -->
+    </div>
+
+  </div><!-- /scroll-area -->
+</section>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   SPORT TRACKER — APPLE WATCH SE 3 OPTIMIZED
+   162 × 197 px · Dark mode · watchOS-style UX
+   ═══════════════════════════════════════════════════ */
+
+/* ── CONFIG ── */
+const CFG = {
+  GOALS: { daily: { pullups: 50, muscleups: 20 } },
+  RPE_COLORS: ['#30D158','#30D158','#34C759','#FFD60A','#FFD60A','#FF9F0A','#FF9F0A','#FF6B35','#FF453A','#FF2D55'],
+  RPE_FACES:  ['😴','😌','🙂','😊','😐','😤','😓','😰','🥵','💀'],
+  RPE_WORDS:  ['TRÈS FACILE','FACILE','FACILE','MODÉRÉ','MODÉRÉ','INTENSE','INTENSE','TRÈS INTENSE','EXTRÊME','MAX'],
+  RPE_DESC: [
+    'Récupération active', 'Très confortable', 'Confortable, longue durée',
+    'Conversation aisée', 'Effort modéré, conversation possible',
+    'Parler en phrases courtes', 'Difficile, effort maintenu',
+    'Très difficile', 'Proche du max', 'Effort maximal absolu'
+  ]
+};
+
+/* ── STATE ── */
+let state = {
+  currentExercise: 'pullups',  // which exercise screen is active
+  setQty: 10,                   // current set rep count
+  setRpe: 5,                    // current RPE
+  sessionSets: [],              // [{type, qty, rpe, time}]
+  data: loadData(),
+};
+
+/* ── DATA PERSISTENCE (localStorage) ── */
+function loadData() {
+  try {
+    const raw = localStorage.getItem('watchSportTracker');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { history: [], dailyTotals: {} };
+}
+
+function saveData() {
+  try {
+    localStorage.setItem('watchSportTracker', JSON.stringify(state.data));
+  } catch(e) { console.warn('Storage unavailable'); }
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getTodayTotals() {
+  return state.data.dailyTotals[todayKey()] || { pullups: 0, muscleups: 0 };
+}
+
+function addReps(type, qty) {
+  const key = todayKey();
+  if (!state.data.dailyTotals[key]) state.data.dailyTotals[key] = { pullups: 0, muscleups: 0 };
+  state.data.dailyTotals[key][type] += qty;
+  state.data.history.push({ type, qty, timestamp: new Date().toISOString(), date: key });
+  saveData();
+}
+
+function resetToday() {
+  const key = todayKey();
+  state.data.dailyTotals[key] = { pullups: 0, muscleups: 0 };
+  state.data.history = state.data.history.filter(h => h.date !== key);
+  state.sessionSets = [];
+  saveData();
+}
+
+/* ── ACTIVE AVERAGES (from active-averages.js logic) ── */
+function calcDailyActiveAvg(type) {
+  const totals = state.data.dailyTotals;
+  let sum = 0, count = 0;
+  Object.values(totals).forEach(d => {
+    if ((d[type] || 0) > 0) { sum += d[type]; count++; }
+  });
+  return count > 0 ? Math.round(sum / count) : 0;
+}
+
+function getWeekTotals() {
+  const totals = { pullups: 0, muscleups: 0, days: 0 };
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const day = state.data.dailyTotals[k];
+    if (day) {
+      totals.pullups += day.pullups || 0;
+      totals.muscleups += day.muscleups || 0;
+      if ((day.pullups || 0) + (day.muscleups || 0) > 0) totals.days++;
+    }
+  }
+  return totals;
+}
+
+function getActiveDaysCount() {
+  return Object.values(state.data.dailyTotals).filter(d => (d.pullups||0)+(d.muscleups||0) > 0).length;
+}
+
+/* ── NAVIGATION ── */
+let currentScreen = 's-home';
+
+function goTo(id) {
+  const cur = document.getElementById(currentScreen);
+  const nxt = document.getElementById(id);
+  if (!nxt || id === currentScreen) return;
+  cur.classList.remove('active');
+  cur.classList.add('exit-left');
+  nxt.classList.add('active');
+  currentScreen = id;
+  setTimeout(() => cur.classList.remove('exit-left'), 300);
+  // Refresh target screen
+  refreshScreen(id);
+}
+
+function refreshScreen(id) {
+  switch(id) {
+    case 's-home':     renderHome(); break;
+    case 's-exercise': renderExercise(); break;
+    case 's-summary':  renderSummary(); break;
+    case 's-set':      renderSetEntry(); break;
+  }
+}
+
+/* ── SCREEN RENDERS ── */
+function renderHome() {
+  const t = getTodayTotals();
+  const entries = state.data.history.filter(h => h.date === todayKey()).length;
+
+  document.getElementById('home-pu-total').textContent = t.pullups;
+  document.getElementById('home-mu-total').textContent = t.muscleups;
+  document.getElementById('home-entries').textContent = entries;
+
+  // Goals
+  const puPct = Math.min(100, Math.round(t.pullups / CFG.GOALS.daily.pullups * 100));
+  const muPct = Math.min(100, Math.round(t.muscleups / CFG.GOALS.daily.muscleups * 100));
+  document.getElementById('goal-pu-bar').style.width = puPct + '%';
+  document.getElementById('goal-mu-bar').style.width = muPct + '%';
+  document.getElementById('goal-pu-text').textContent = `${t.pullups} / ${CFG.GOALS.daily.pullups}`;
+  document.getElementById('goal-mu-text').textContent = `${t.muscleups} / ${CFG.GOALS.daily.muscleups}`;
+
+  // Streak dots (7 days)
+  const row = document.getElementById('streak-row');
+  row.innerHTML = '';
+  let streak = 0;
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const day = state.data.dailyTotals[k];
+    const active = day && ((day.pullups||0)+(day.muscleups||0)) > 0;
+    const isToday = i === 0;
+    const dot = document.createElement('div');
+    dot.className = `streak-dot${isToday ? ' today' : (active ? ' done' : '')}`;
+    row.appendChild(dot);
+    if (active) streak++;
+  }
+  document.getElementById('streak-label').textContent = `${streak} jour${streak>1?'s':''} actif${streak>1?'s':''} cette semaine`;
+}
+
+function renderExercise() {
+  const type = state.currentExercise;
+  const ispu = type === 'pullups';
+  const color = ispu ? 'var(--blue)' : 'var(--orange)';
+  const t = getTodayTotals();
+  const total = t[type];
+
+  document.getElementById('ex-hdr-label').textContent = ispu ? '🏋️ TRACTIONS' : '💥 MUSCLE-UPS';
+  const countEl = document.getElementById('ex-count-display');
+  countEl.textContent = total;
+  countEl.style.color = color;
+
+  // Increment buttons color
+  document.getElementById('inc-5').style.background = color;
+  document.getElementById('inc-5').style.color = ispu ? '#fff' : '#000';
+  document.getElementById('inc-10').style.background = ispu ? 'var(--blue-dim)' : '#5C3A00';
+  document.getElementById('inc-10').style.color = '#fff';
+
+  // Session stats
+  const sessSets = state.sessionSets.filter(s => s.type === type);
+  const sessReps = sessSets.reduce((a,s) => a+s.qty, 0);
+  const sessRpe = sessSets.length ? Math.round(sessSets.reduce((a,s)=>a+s.rpe,0)/sessSets.length) : null;
+  document.getElementById('ex-session-reps').textContent = sessReps;
+  document.getElementById('ex-session-sets').textContent = sessSets.length;
+  document.getElementById('ex-session-rpe').textContent = sessRpe !== null ? sessRpe : '—';
+  document.getElementById('ex-session-rpe').style.color = sessRpe ? CFG.RPE_COLORS[sessRpe-1] : 'var(--text-dim)';
+
+  // Last 3 sets
+  const list = document.getElementById('ex-set-list');
+  const recent = sessSets.slice(-3).reverse();
+  if (recent.length === 0) {
+    list.innerHTML = '<div class="t-small" style="text-align:center;padding:4px 0;">Aucune série</div>';
+  } else {
+    list.innerHTML = recent.map(s =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:8px;padding:5px 8px;">
+        <span style="font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">${s.qty} reps</span>
+        <span style="font-size:10px;font-weight:700;color:${CFG.RPE_COLORS[s.rpe-1]};">RPE ${s.rpe}</span>
+       </div>`
+    ).join('');
+  }
+}
+
+function renderSetEntry() {
+  const type = state.currentExercise;
+  const ispu = type === 'pullups';
+  const sessSets = state.sessionSets.filter(s => s.type === type);
+
+  document.getElementById('set-series-label').textContent = `SÉRIE ${sessSets.length + 1}`;
+  document.getElementById('set-ex-name').textContent = ispu ? 'TRACTIONS' : 'MUSCLE-UPS';
+  document.getElementById('set-qty').textContent = state.setQty;
+
+  // Build RPE dots
+  const dotsEl = document.getElementById('set-rpe-dots');
+  dotsEl.innerHTML = Array.from({length:10},(_,i)=>
+    `<button class="rpe-dot${state.setRpe===i+1?' active':''}"
+      onclick="setRpe(${i+1})"
+      style="${state.setRpe===i+1 ? `background:${CFG.RPE_COLORS[i]};` : ''}">
+       ${i+1}
+    </button>`
+  ).join('');
+
+  updateSetRpeDisplay();
+}
+
+function renderSummary() {
+  const t = getTodayTotals();
+  const week = getWeekTotals();
+  const avgPu = calcDailyActiveAvg('pullups');
+  const avgMu = calcDailyActiveAvg('muscleups');
+  const activeDays = getActiveDaysCount();
+  const allSets = state.sessionSets;
+  const rpes = allSets.map(s=>s.rpe);
+  const avgRpe = rpes.length ? Math.round(rpes.reduce((a,b)=>a+b)/rpes.length) : null;
+
+  const total = t.pullups + t.muscleups;
+  const trophy = total >= 100 ? '🏆' : total >= 50 ? '🥇' : total > 0 ? '💪' : '😴';
+  const title = total >= 100 ? 'EXCELLENT !' : total >= 50 ? 'BIEN JOUÉ !' : total > 0 ? 'C\'EST PARTI !' : 'PAS DE SÉANCE';
+
+  document.getElementById('sum-trophy').textContent = trophy;
+  document.getElementById('sum-title').textContent = title;
+  document.getElementById('sum-pu').textContent = t.pullups;
+  document.getElementById('sum-mu').textContent = t.muscleups;
+  document.getElementById('sum-sets').textContent = allSets.length;
+  document.getElementById('sum-rpe').textContent = avgRpe || '—';
+  if (avgRpe) document.getElementById('sum-rpe').style.color = CFG.RPE_COLORS[avgRpe-1];
+  document.getElementById('sum-week-pu').textContent = week.pullups;
+  document.getElementById('sum-week-mu').textContent = week.muscleups;
+  document.getElementById('sum-week-days').textContent = week.days;
+  document.getElementById('sum-avg-pu').textContent = avgPu || '—';
+  document.getElementById('sum-avg-mu').textContent = avgMu || '—';
+  document.getElementById('sum-active-days').textContent = activeDays;
+
+  // 7-day mini bars
+  renderMiniBars();
+}
+
+function renderMiniBars() {
+  const container = document.getElementById('sum-history-bars');
+  container.innerHTML = '';
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const day = state.data.dailyTotals[k] || { pullups:0, muscleups:0 };
+    days.push({ ...day, isToday: i===0 });
+  }
+  const maxVal = Math.max(...days.map(d=>(d.pullups||0)+(d.muscleups||0)), 1);
+
+  days.forEach(day => {
+    const total = (day.pullups||0) + (day.muscleups||0);
+    const pct = Math.round((total / maxVal) * 100);
+    const col = document.createElement('div');
+    col.style.cssText = `flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;`;
+    col.innerHTML = `
+      <div style="width:100%;flex:1;display:flex;flex-direction:column;justify-content:flex-end;">
+        ${total > 0 ? `<div style="height:${pct}%;background:${day.isToday?'var(--blue)':'var(--surface2)'};border-radius:3px 3px 0 0;min-height:3px;"></div>` : '<div style="height:3px;background:var(--border);border-radius:2px;"></div>'}
+      </div>
+    `;
+    container.appendChild(col);
+  });
+}
+
+/* ── RPE LOGIC ── */
+function setRpe(val) {
+  state.setRpe = val;
+  updateSetRpeDisplay();
+  renderSetEntry();
+}
+
+function updateSetRpeDisplay() {
+  const v = state.setRpe;
+  const pct = (v / 10) * 100;
+  const color = CFG.RPE_COLORS[v-1];
+  const fill = document.getElementById('set-rpe-fill');
+  const label = document.getElementById('set-rpe-label');
+  if (fill) { fill.style.width = pct + '%'; fill.style.background = color; }
+  if (label) label.textContent = v;
+}
+
+function handleRpeTrackClick(e) {
+  const track = document.getElementById('set-rpe-track');
+  const rect = track.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  setRpe(Math.max(1, Math.min(10, Math.round(pct * 10))));
+}
+
+function handleMainRpeClick(e) {
+  const track = document.getElementById('rpe-main-track');
+  const rect = track.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  const val = Math.max(1, Math.min(10, Math.round(pct * 10)));
+  updateMainRpe(val);
+}
+
+function updateMainRpe(val) {
+  const color = CFG.RPE_COLORS[val-1];
+  const fill = document.getElementById('rpe-main-fill');
+  const label = document.getElementById('rpe-main-label');
+  if (fill) { fill.style.background = color; fill.style.width = (val/10*100)+'%'; }
+  if (label) label.textContent = val;
+  const face = document.getElementById('rpe-face');
+  const word = document.getElementById('rpe-word');
+  const desc = document.getElementById('rpe-scale-desc');
+  if (face) face.textContent = CFG.RPE_FACES[val-1];
+  if (word) { word.textContent = CFG.RPE_WORDS[val-1]; word.style.color = color; }
+  if (desc) desc.textContent = CFG.RPE_DESC[val-1];
+
+  // Build number grid
+  const grid = document.querySelector('#s-rpe div[style*="grid"]');
+  if (grid) {
+    grid.innerHTML = Array.from({length:10},(_,i)=>
+      `<button onclick="updateMainRpe(${i+1})"
+        style="height:${i+1===val?'36px':'30px'};border:none;border-radius:8px;
+        background:${i+1===val?CFG.RPE_COLORS[i]:'var(--surface2)'};
+        color:${i+1===val?'#fff':'var(--text-dim)'};
+        font-family:var(--font);font-weight:800;font-size:${i+1===val?'14px':'11px'};
+        cursor:pointer;transition:all 0.1s;-webkit-tap-highlight-color:transparent;">
+         ${i+1}
+       </button>`
+    ).join('');
+  }
+}
+
+/* ── ACTIONS ── */
+function startExercise(type) {
+  state.currentExercise = type;
+  goTo('s-exercise');
+}
+
+function quickAdd(qty) {
+  const type = state.currentExercise;
+  addReps(type, qty);
+  renderExercise();
+  // Haptic feedback suggestion (WKInterfaceHapticFeedback in real WatchKit)
+  pulseCounter();
+  toast(`+${qty} ${type === 'pullups' ? 'tractions' : 'muscle-ups'}`);
+}
+
+function pulseCounter() {
+  const el = document.getElementById('ex-count-display');
+  el.style.transform = 'scale(1.15)';
+  setTimeout(() => { el.style.transform = 'scale(1)'; el.style.transition = 'transform 0.2s'; }, 100);
+}
+
+function openSetEntry() {
+  // Pre-fill with last set qty
+  const type = state.currentExercise;
+  const last = state.sessionSets.filter(s=>s.type===type).slice(-1)[0];
+  if (last) state.setQty = last.qty;
+  goTo('s-set');
+}
+
+function adjustSetQty(delta) {
+  state.setQty = Math.max(1, state.setQty + delta);
+  document.getElementById('set-qty').textContent = state.setQty;
+  // Animate
+  const el = document.getElementById('set-qty');
+  el.style.transform = delta > 0 ? 'scale(1.08)' : 'scale(0.95)';
+  el.style.transition = 'transform 0.1s';
+  setTimeout(() => { el.style.transform = 'scale(1)'; }, 120);
+}
+
+function confirmSet() {
+  const type = state.currentExercise;
+  const qty = state.setQty;
+  const rpe = state.setRpe;
+
+  addReps(type, qty);
+  state.sessionSets.push({ type, qty, rpe, time: new Date().toISOString() });
+
+  toast(`✓ ${qty} reps · RPE ${rpe}`);
+  goTo('s-exercise');
+}
+
+function confirmReset() {
+  // On a watch, would use WKInterfaceAlertAction
+  if (confirm('Réinitialiser la journée ?')) {
+    resetToday();
+    renderHome();
+    toast('Journée réinitialisée');
+  }
+}
+
+/* ── TOAST ── */
+function toast(msg, duration=1800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+/* ── CLOCK ── */
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clock-h').textContent = h;
+  document.getElementById('clock-m').textContent = ':'+m;
+
+  const days = ['DIM','LUN','MAR','MER','JEU','VEN','SAM'];
+  const months = ['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'];
+  document.getElementById('home-date').textContent =
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
+}
+
+/* ── INIT ── */
+function init() {
+  updateClock();
+  setInterval(updateClock, 10000);
+
+  renderHome();
+
+  // Init RPE screen
+  updateMainRpe(5);
+
+  // Build RPE number grid initial
+  const grid = document.querySelector('#s-rpe div[style*="grid"]');
+  if (grid) updateMainRpe(5);
+
+  // Build set entry RPE dots
+  renderSetEntry();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
